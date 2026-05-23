@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lot Size Calc</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0d0f11;
+    --surface:  #161a1d;
+    --card:     #1c2127;
+    --border:   #2a3038;
+    --accent:   #f0b429;
+    --accent2:  #38bdf8;
+    --text:     #e8eaed;
+    --muted:    #6b7380;
+    --success:  #4ade80;
+    --danger:   #f87171;
+    --font:     'JetBrains Mono', monospace;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 12px;
+    min-width: 320px;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+
+  /* Header */
+  .hd {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .hd-title { font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: 0.12em; text-transform: uppercase; }
+  .hd-sub   { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; }
+
+  /* Section label */
+  .lbl {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    display: block;
+  }
+
+  /* Row wrapper */
+  .row    { margin-bottom: 10px; }
+  .row-2  { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+
+  /* Inputs & select */
+  input[type="number"], select {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    padding: 7px 9px;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color .15s;
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+  input[type="number"]:focus, select:focus { border-color: var(--accent2); }
+  select option { background: var(--card); }
+
+  /* Toggle (USD / Cent) */
+  .bal-row { display: flex; gap: 6px; align-items: stretch; }
+  .bal-row input { flex: 1; }
+  .toggle {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .toggle button {
+    padding: 0 10px;
+    font-family: var(--font);
+    font-size: 11px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    background: transparent;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    transition: background .12s, color .12s;
+  }
+  .toggle button.on { background: var(--accent); color: #000; }
+
+  /* Risk slider row */
+  .risk-row { display: flex; gap: 8px; align-items: center; }
+  input[type="range"] {
+    -webkit-appearance: none;
+    flex: 1;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    background: var(--accent);
+    border-radius: 50%;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 14px; height: 14px;
+    background: var(--accent);
+    border-radius: 50%;
+    border: none;
+  }
+  .risk-num {
+    width: 50px;
+    text-align: center;
+  }
+
+  /* Hint text */
+  .hint {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 4px;
+    display: none;
+  }
+
+  /* Divider */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+
+  /* Calc button */
+  .calc-btn {
+    width: 100%;
+    padding: 9px;
+    background: var(--accent);
+    color: #000;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: opacity .15s;
+    margin-bottom: 12px;
+  }
+  .calc-btn:hover   { opacity: .85; }
+  .calc-btn:active  { opacity: .7; }
+
+  /* Result grid */
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+  .metric {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 6px;
+    text-align: center;
+  }
+  .metric .m-lbl { font-size: 9px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px; }
+  .metric .m-val { font-size: 16px; font-weight: 700; color: var(--accent); line-height: 1; }
+  .metric .m-val.big { font-size: 20px; }
+  .metric .m-sub { font-size: 9px; color: var(--muted); margin-top: 2px; }
+
+  /* Lot breakdown */
+  .lot-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .lot-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 6px 8px;
+    text-align: center;
+  }
+  .lot-item .l-lbl { font-size: 9px; color: var(--muted); margin-bottom: 3px; text-transform: uppercase; letter-spacing: .05em; }
+  .lot-item .l-val { font-size: 13px; font-weight: 600; color: var(--text); }
+
+  /* Debug line */
+  .debug {
+    background: var(--surface);
+    border-left: 2px solid var(--accent2);
+    padding: 6px 8px;
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.7;
+    border-radius: 0 4px 4px 0;
+  }
+
+  /* Error */
+  .err {
+    background: #2a1515;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 12px;
+    display: none;
+    margin-bottom: 8px;
+  }
+
+  /* Hidden */
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="hd">
+  <span class="hd-title">Lot Calc</span>
+  <span class="hd-sub">v2.1 · by คุณที</span>
+</div>
+
+<!-- Asset + SL Mode -->
+<div class="row-2">
+  <div>
+    <span class="lbl">Asset</span>
+    <select id="asset">
+      <option value="XAUUSD">XAUUSD (Gold)</option>
+      <option value="EURUSD">EURUSD</option>
+      <option value="GBPUSD">GBPUSD</option>
+      <option value="USDJPY">USDJPY</option>
+      <option value="GBPJPY">GBPJPY</option>
+      <option value="BTCUSD">BTCUSD</option>
+      <option value="CUSTOM">Custom…</option>
+    </select>
+  </div>
+  <div>
+    <span class="lbl">SL input</span>
+    <select id="slMode">
+      <option value="price">Entry & SL price</option>
+      <option value="pips">Pips distance</option>
+    </select>
+  </div>
+</div>
+
+<!-- Custom pip value -->
+<div class="row hidden" id="customRow">
+  <span class="lbl">Pip value / 1.0 standard lot (USD)</span>
+  <input type="number" id="customPipVal" placeholder="10" value="10" min="0.0001" step="any">
+  <div class="hint" style="display:block">EURUSD = 10 · USDJPY ≈ 9.09 · XAUUSD = 10</div>
+</div>
+
+<!-- Balance + Account type -->
+<div class="row">
+  <span class="lbl">Balance</span>
+  <div class="bal-row">
+    <input type="number" id="balance" placeholder="9000" value="" min="0.01" step="any">
+    <div class="toggle">
+      <button id="btnUSD" class="on" onclick="setCurr('USD')">USD</button>
+      <button id="btnCent" onclick="setCurr('Cent')">CENT</button>
+    </div>
+  </div>
+  <div class="hint" id="centHint">Cent balance ÷ 100 → USD จริง ก่อนคำนวณ</div>
+</div>
+
+<!-- Risk % -->
+<div class="row">
+  <span class="lbl">Risk <span id="riskLabel" style="color:var(--accent)">10%</span></span>
+  <div class="risk-row">
+    <input type="range" id="riskRange" min="0.5" max="20" step="0.5" value="10">
+    <input type="number" id="riskPct" class="risk-num" value="10" min="0.1" max="100" step="0.5">
+  </div>
+</div>
+
+<!-- Entry & SL price -->
+<div class="row-2" id="priceRow">
+  <div>
+    <span class="lbl">Entry price</span>
+    <input type="number" id="entry" placeholder="2350.00" step="any">
+  </div>
+  <div>
+    <span class="lbl">SL price</span>
+    <input type="number" id="slPrice" placeholder="2340.00" step="any">
+  </div>
+</div>
+
+<!-- Pips distance -->
+<div class="row hidden" id="pipsRow">
+  <span class="lbl">SL distance (pips)</span>
+  <input type="number" id="slPips" placeholder="200" min="0.1" step="any">
+</div>
+
+<hr class="divider">
+
+<button class="calc-btn" onclick="calculate()">⚡ Calculate</button>
+
+<!-- Error -->
+<div class="err" id="errBox"></div>
+
+<!-- Results -->
+<div id="resultBlock" class="hidden">
+  <div class="result-grid">
+    <div class="metric">
+      <div class="m-lbl">Lot size</div>
+      <div class="m-val big" id="rLot">—</div>
+    </div>
+    <div class="metric">
+      <div class="m-lbl">Risk amt</div>
+      <div class="m-val" id="rRisk">—</div>
+      <div class="m-sub" id="rRiskSub"></div>
+    </div>
+    <div class="metric">
+      <div class="m-lbl">Pip value</div>
+      <div class="m-val" id="rPip">—</div>
+      <div class="m-sub">per pip</div>
+    </div>
+  </div>
+
+  <div class="lot-row">
+    <div class="lot-item">
+      <div class="l-lbl">Standard</div>
+      <div class="l-val" id="rStd">—</div>
+    </div>
+    <div class="lot-item">
+      <div class="l-lbl">Mini</div>
+      <div class="l-val" id="rMini">—</div>
+    </div>
+    <div class="lot-item">
+      <div class="l-lbl">Micro</div>
+      <div class="l-val" id="rMicro">—</div>
+    </div>
+  </div>
+
+  <div class="debug" id="rDebug"></div>
+</div>
+
+<script>
+/* ── Config ── */
+const ASSETS = {
+  XAUUSD: { pipSize: 0.01,   pipVal: 10    },
+  EURUSD: { pipSize: 0.0001, pipVal: 10    },
+  GBPUSD: { pipSize: 0.0001, pipVal: 10    },
+  USDJPY: { pipSize: 0.01,   pipVal: 9.09  },
+  GBPJPY: { pipSize: 0.01,   pipVal: 9.09  },
+  BTCUSD: { pipSize: 1,      pipVal: 10    },
+};
+
+let currMode = 'USD';
+
+/* ── Currency toggle ── */
+function setCurr(m) {
+  currMode = m;
+  document.getElementById('btnUSD').classList.toggle('on',  m === 'USD');
+  document.getElementById('btnCent').classList.toggle('on', m === 'Cent');
+  document.getElementById('centHint').style.display = m === 'Cent' ? 'block' : 'none';
+}
+
+/* ── Risk sync ── */
+const rngEl  = document.getElementById('riskRange');
+const pctEl  = document.getElementById('riskPct');
+const lblEl  = document.getElementById('riskLabel');
+function syncRisk(v) {
+  const clamped = Math.min(100, Math.max(0.1, parseFloat(v) || 10));
+  rngEl.value = Math.min(20, clamped);
+  pctEl.value = clamped;
+  lblEl.textContent = clamped + '%';
+}
+rngEl.addEventListener('input', () => syncRisk(rngEl.value));
+pctEl.addEventListener('input', () => syncRisk(pctEl.value));
+
+/* ── Asset change ── */
+document.getElementById('asset').addEventListener('change', function() {
+  document.getElementById('customRow').classList.toggle('hidden', this.value !== 'CUSTOM');
+});
+
+/* ── SL mode change ── */
+document.getElementById('slMode').addEventListener('change', function() {
+  const isPips = this.value === 'pips';
+  document.getElementById('priceRow').classList.toggle('hidden', isPips);
+  document.getElementById('pipsRow').classList.toggle('hidden', !isPips);
+});
+
+/* ── Error / Result helpers ── */
+function showErr(msg) {
+  const e = document.getElementById('errBox');
+  e.textContent = '⚠ ' + msg;
+  e.style.display = 'block';
+  document.getElementById('resultBlock').classList.add('hidden');
+}
+function clearErr() {
+  document.getElementById('errBox').style.display = 'none';
+}
+
+/* ── Main calculate ── */
+function calculate() {
+  clearErr();
+
+  /* --- read & validate inputs --- */
+  const asset   = document.getElementById('asset').value;
+  const rawBal  = parseFloat(document.getElementById('balance').value);
+  const risk    = parseFloat(pctEl.value);
+  const slModeV = document.getElementById('slMode').value;
+
+  if (isNaN(rawBal) || rawBal <= 0) return showErr('กรุณาใส่ Balance ที่ถูกต้อง');
+  if (isNaN(risk)   || risk  <= 0)  return showErr('กรุณาใส่ Risk % ที่ถูกต้อง');
+  if (risk > 100)                   return showErr('Risk % ต้องไม่เกิน 100');
+
+  /* --- account type conversion --- */
+  const balUSD = currMode === 'Cent' ? rawBal / 100 : rawBal;
+  const riskAmt = balUSD * risk / 100;
+
+  /* --- asset config --- */
+  let cfg;
+  if (asset === 'CUSTOM') {
+    const cv = parseFloat(document.getElementById('customPipVal').value);
+    if (isNaN(cv) || cv <= 0) return showErr('กรุณาใส่ Pip value ที่ถูกต้องสำหรับ Custom asset');
+    cfg = { pipSize: 1, pipVal: cv };
+  } else {
+    cfg = ASSETS[asset];
+  }
+
+  /* --- SL distance in pips --- */
+  let pipsDist;
+  if (slModeV === 'pips') {
+    pipsDist = parseFloat(document.getElementById('slPips').value);
+    if (isNaN(pipsDist) || pipsDist <= 0) return showErr('กรุณาใส่ SL distance (pips) ที่ถูกต้อง');
+  } else {
+    const entry = parseFloat(document.getElementById('entry').value);
+    const slP   = parseFloat(document.getElementById('slPrice').value);
+    if (isNaN(entry) || isNaN(slP)) return showErr('กรุณาใส่ Entry price และ SL price');
+    if (entry <= 0 || slP <= 0)     return showErr('Entry price และ SL price ต้องมากกว่า 0');
+    if (entry === slP)              return showErr('Entry price และ SL price ต้องไม่เท่ากัน');
+    const rawDiff = Math.abs(entry - slP);
+    pipsDist = rawDiff / cfg.pipSize;
+    if (pipsDist < 0.1) return showErr('SL ใกล้เกินไป — ตรวจสอบ decimal ของ Entry/SL');
+  }
+
+  /* --- core calculation --- */
+  // lotSize = riskAmtUSD / (pipsDist * pipValuePerLot)
+  const lotSize    = riskAmt / (pipsDist * cfg.pipVal);
+  const actualRisk = lotSize * pipsDist * cfg.pipVal; // should === riskAmt (sanity check)
+  const pipValPerTrade = lotSize * cfg.pipVal;        // $ per pip for this lot
+
+  if (!isFinite(lotSize) || lotSize <= 0) return showErr('ผลการคำนวณผิดปกติ — ตรวจสอบ input อีกครั้ง');
+
+  /* --- display --- */
+  const isCent = currMode === 'Cent';
+  // lot size display
+  document.getElementById('rLot').textContent = lotSize < 0.01
+    ? lotSize.toFixed(4)
+    : lotSize.toFixed(2);
+
+  // risk amount (show in account currency)
+  if (isCent) {
+    document.getElementById('rRisk').textContent = '¢' + (actualRisk * 100).toFixed(2);
+    document.getElementById('rRiskSub').textContent = '= $' + actualRisk.toFixed(4);
+  } else {
+    document.getElementById('rRisk').textContent = '$' + actualRisk.toFixed(2);
+    document.getElementById('rRiskSub').textContent = risk + '% of $' + balUSD.toFixed(2);
+  }
+
+  // pip value per trade (always in USD)
+  document.getElementById('rPip').textContent = '$' + pipValPerTrade.toFixed(3);
+
+  // lot breakdown
+  document.getElementById('rStd').textContent  = lotSize.toFixed(2);
+  document.getElementById('rMini').textContent  = (lotSize * 10).toFixed(2);
+  document.getElementById('rMicro').textContent = (lotSize * 100).toFixed(2);
+
+  // debug line
+  const balLabel = isCent
+    ? `¢${rawBal} (= $${balUSD.toFixed(4)})`
+    : `$${rawBal}`;
+  document.getElementById('rDebug').innerHTML =
+    `${asset === 'CUSTOM' ? 'CUSTOM' : asset} · ${currMode} account<br>` +
+    `Balance: ${balLabel} · Risk: ${risk}% = $${riskAmt.toFixed(4)}<br>` +
+    `SL: ${pipsDist.toFixed(2)} pips · pip val/lot: $${cfg.pipVal}`;
+
+  document.getElementById('resultBlock').classList.remove('hidden');
+}
+
+/* ── Enter key shortcut ── */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') calculate();
+});
+</script>
+</body>
+</html>
